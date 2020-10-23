@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::models::{Category, Registration, Server};
 use actix_files::NamedFile;
 use actix_web::{
     get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
@@ -14,33 +15,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 use tracing::{info, instrument, Level};
 
-#[derive(Debug, Clone)]
-enum Registration {
-    Open,
-    Invite,
-    Closed,
-}
-
-// TODO add database compatible structs into a models dir
-#[derive(Debug, Clone)]
-struct Server {
-    id: i64,
-    name: String,
-    url: String,
-    logo_url: Option<String>,
-    admins: Vec<String>,
-    categories: Vec<Category>,
-    rules: String,
-    description: String,
-    registration_status: Registration,
-}
-
-#[derive(Debug, Clone)]
-struct Category {
-    id: i64,
-    name: String,
-    servers: Vec<Server>,
-}
+mod models;
 
 #[derive(Template, Debug)]
 #[template(path = "index.html")]
@@ -57,7 +32,7 @@ struct DetailsTemplate {
 
 #[instrument]
 #[get("/details/{server_id}")]
-async fn details_endpoint(web::Path(server_id): web::Path<i64>) -> impl Responder {
+async fn details_endpoint(web::Path(server_id): web::Path<i32>) -> impl Responder {
     // TODO get server from database
     let current_server = Server {
         id: server_id,
@@ -78,7 +53,7 @@ async fn details_endpoint(web::Path(server_id): web::Path<i64>) -> impl Responde
 
 #[instrument]
 #[get("/category/{category_id}")]
-async fn category_endpoint(web::Path(category_id): web::Path<i64>) -> impl Responder {
+async fn category_endpoint(web::Path(category_id): web::Path<i32>) -> impl Responder {
     // TODO get available categories from database
     // TODO get available servers from database
     let test_category = Category {
@@ -186,7 +161,7 @@ async fn main() -> Result<()> {
     let mut listenfd = ListenFd::from_env();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
-    let db_pool = PgPool::new(&database_url).await?;
+    let db_pool = PgPool::connect(&database_url).await?;
 
     let mut server = HttpServer::new(move || {
         App::new()
