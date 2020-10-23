@@ -1,11 +1,8 @@
 #![allow(dead_code)]
 
-use crate::models::{Category, Registration, Server};
+use crate::models::{Category, CategoryDB, Registration, Server};
 use actix_files::NamedFile;
-use actix_web::{
-    get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
-    Result as ActixResult,
-};
+use actix_web::{get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Result as ActixResult};
 use anyhow::Result;
 use askama_actix::{Template, TemplateIntoResponse};
 use dotenv::dotenv;
@@ -93,32 +90,21 @@ async fn category_endpoint(web::Path(category_name): web::Path<String>) -> impl 
 
 #[instrument]
 #[get("/")]
-async fn index() -> impl Responder {
-    // TODO get available categories from database
-    IndexTemplate {
-        categories: vec![
-            Category {
-                name: "Test".into(),
-                servers: vec![Server {
-                    name: "Conduit Nordgedanken".into(),
-                    url: "https://conduit.nordgedanken.dev".into(),
-                    server_name: "nordgedanken.dev".into(),
-                    logo_url: None,
-                    admins: vec!["@mtrnord:conduit.nordgedanken.dev".into()],
-                    categories: vec![],
-                    rules: "Be Nice".into(),
-                    description: "A conduit Testserver".into(),
-                    registration_status: Registration::Open,
-                }],
-            },
-            Category {
-                name: "Test2".into(),
-                servers: vec![],
-            },
-        ],
-        current_category: None,
+async fn index(db_pool: web::Data<PgPool>) -> impl Responder {
+    let result = CategoryDB::get_all(db_pool.get_ref()).await;
+    match result {
+        Ok(categories) => {
+            let template_result = IndexTemplate {
+                categories,
+                current_category: None,
+            }.into_response();
+            match template_result {
+                Ok(r) => r,
+                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            }
+        },
+        _ => HttpResponse::InternalServerError().body("Failed to load categories"),
     }
-    .into_response()
 }
 
 #[instrument]
