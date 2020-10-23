@@ -31,13 +31,13 @@ struct DetailsTemplate {
 }
 
 #[instrument]
-#[get("/details/{server_id}")]
-async fn details_endpoint(web::Path(server_id): web::Path<i32>) -> impl Responder {
+#[get("/details/{server_url}")]
+async fn details_endpoint(web::Path(server_url): web::Path<String>) -> impl Responder {
     // TODO get server from database
     let current_server = Server {
-        id: server_id,
         name: "Conduit Nordgedanken".into(),
         url: "https://conduit.nordgedanken.dev".into(),
+        server_name: "nordgedanken.dev".into(),
         logo_url: None,
         admins: vec!["@mtrnord:conduit.nordgedanken.dev".into()],
         categories: vec![],
@@ -52,17 +52,16 @@ async fn details_endpoint(web::Path(server_id): web::Path<i32>) -> impl Responde
 }
 
 #[instrument]
-#[get("/category/{category_id}")]
-async fn category_endpoint(web::Path(category_id): web::Path<i32>) -> impl Responder {
+#[get("/category/{category_name}")]
+async fn category_endpoint(web::Path(category_name): web::Path<String>) -> impl Responder {
     // TODO get available categories from database
     // TODO get available servers from database
     let test_category = Category {
-        id: category_id,
         name: "Test".into(),
         servers: vec![Server {
-            id: 0,
             name: "Conduit Nordgedanken".into(),
             url: "https://conduit.nordgedanken.dev".into(),
+            server_name: "nordgedanken.dev".into(),
             logo_url: None,
             admins: vec!["@mtrnord:conduit.nordgedanken.dev".into()],
             categories: vec![],
@@ -71,11 +70,10 @@ async fn category_endpoint(web::Path(category_id): web::Path<i32>) -> impl Respo
             registration_status: Registration::Open,
         }],
     };
-    let current_category = if category_id == 0 {
+    let current_category = if category_name == "Test" {
         test_category.clone()
     } else {
         Category {
-            id: category_id,
             name: "Test2".into(),
             servers: vec![],
         }
@@ -84,7 +82,6 @@ async fn category_endpoint(web::Path(category_id): web::Path<i32>) -> impl Respo
         categories: vec![
             test_category,
             Category {
-                id: 1,
                 name: "Test2".into(),
                 servers: vec![],
             },
@@ -101,12 +98,11 @@ async fn index() -> impl Responder {
     IndexTemplate {
         categories: vec![
             Category {
-                id: 0,
                 name: "Test".into(),
                 servers: vec![Server {
-                    id: 0,
                     name: "Conduit Nordgedanken".into(),
                     url: "https://conduit.nordgedanken.dev".into(),
+                    server_name: "nordgedanken.dev".into(),
                     logo_url: None,
                     admins: vec!["@mtrnord:conduit.nordgedanken.dev".into()],
                     categories: vec![],
@@ -116,7 +112,6 @@ async fn index() -> impl Responder {
                 }],
             },
             Category {
-                id: 1,
                 name: "Test2".into(),
                 servers: vec![],
             },
