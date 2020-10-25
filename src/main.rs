@@ -50,42 +50,23 @@ async fn details_endpoint(web::Path(server_url): web::Path<String>) -> impl Resp
 
 #[instrument]
 #[get("/category/{category_name}")]
-async fn category_endpoint(web::Path(category_name): web::Path<String>) -> impl Responder {
-    // TODO get available categories from database
-    // TODO get available servers from database
-    let test_category = Category {
-        name: "Test".into(),
-        servers: vec![Server {
-            name: "Conduit Nordgedanken".into(),
-            url: "https://conduit.nordgedanken.dev".into(),
-            server_name: "nordgedanken.dev".into(),
-            logo_url: None,
-            admins: vec!["@mtrnord:conduit.nordgedanken.dev".into()],
-            categories: vec![],
-            rules: "Be Nice".into(),
-            description: "A conduit Testserver".into(),
-            registration_status: Registration::Open,
-        }],
-    };
-    let current_category = if category_name == "Test" {
-        test_category.clone()
-    } else {
-        Category {
-            name: "Test2".into(),
-            servers: vec![],
-        }
-    };
-    IndexTemplate {
-        categories: vec![
-            test_category,
-            Category {
-                name: "Test2".into(),
-                servers: vec![],
-            },
-        ],
-        current_category: Some(current_category),
+async fn category_endpoint(web::Path(category_name): web::Path<String>, db_pool: web::Data<PgPool>) -> impl Responder {
+    let result = CategoryDB::get_all(db_pool.get_ref()).await;
+    match result {
+        Ok(categories) => {
+            let current_category = categories.clone().into_iter().find(|category| category.name == category_name);
+            let template_result = IndexTemplate {
+                categories,
+                current_category,
+            }
+                .into_response();
+            match template_result {
+                Ok(r) => r,
+                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+            }
+        },
+        _ => HttpResponse::InternalServerError().body("Failed to load categories"),
     }
-    .into_response()
 }
 
 #[instrument]
