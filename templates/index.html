@@ -94,6 +94,13 @@
             {% match current_category %}
                 {% when Some with (val) %}
                 <h1 class="content-title">{{val.name}}</h1>
+                {% match val.description %}
+                    {% when Some with (description) %}
+                    <p>
+                        {{ description }}
+                    </p>
+                    {% when None %}
+                {% endmatch %}
                 <div class="card-columns">
                     {% for server in val.servers %}
 

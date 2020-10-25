@@ -24,19 +24,21 @@ pub struct Server {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct CategoryDB {
     pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Category {
     pub name: String,
+    pub description: Option<String>,
     pub servers: Vec<Server>,
 }
 
 impl CategoryDB {
     pub async fn get_all(pg_pool: &PgPool) -> anyhow::Result<Vec<Category>> {
-        let categories =
-            sqlx::query_as!(CategoryDB, "SELECT * FROM categories").fetch_all(pg_pool)
-                .await?;
+        let categories = sqlx::query_as!(CategoryDB, "SELECT * FROM categories")
+            .fetch_all(pg_pool)
+            .await?;
         let mut categories_result = vec![];
         for category in categories {
             categories_result.push(category.get_category(pg_pool).await?);
@@ -53,6 +55,8 @@ impl CategoryDB {
         Ok(category)
     }
     pub async fn get_category(self, pg_pool: &PgPool) -> anyhow::Result<Category> {
+        let category = sqlx::query!(r#"SELECT description FROM categories WHERE name = $1"#, &self.name).fetch_one(pg_pool)
+            .await?;
         let mut servers = vec![];
         let servers_raw = sqlx::query!(r#"SELECT server_url as "server_url!: String" FROM servers_categories WHERE category_name = $1"#, &self.name).fetch_all(pg_pool)
             .await?;
@@ -65,6 +69,7 @@ impl CategoryDB {
         }
         Ok(Category {
             name: self.name,
+            description: category.description,
             servers,
         })
     }
